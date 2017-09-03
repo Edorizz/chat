@@ -3,6 +3,7 @@
 
 CC := gcc
 CFLAGS := -Wall -pedantic -c
+LDLIBS := -pthread
 MKDIR := mkdir -p
 RM := rm -f
 
@@ -12,10 +13,10 @@ obj:
 	$(MKDIR) obj/
 
 client: obj/client.o
-	$(CC) $(LDFLAGS) obj/client.o -o client
+	$(CC) $(LDFLAGS) $(LDLIBS) obj/client.o -o client
 
 server: obj/server.o
-	$(CC) $(LDFLAGS) obj/server.o -o server
+	$(CC) $(LDFLAGS) $(LDLIBS) obj/server.o -o server
 
 obj/client.o: src/client.c
 	$(CC) $(CFLAGS) src/client.c -o obj/client.o
