@@ -4,26 +4,30 @@
 CC := gcc
 CFLAGS := -Wall -pedantic -c
 LDLIBS := -pthread
+NAME := chat
 MKDIR := mkdir -p
 RM := rm -f
 
-all: client server obj
+all: $(NAME) obj
 
 obj:
 	$(MKDIR) obj/
 
-client: obj/client.o
-	$(CC) $(LDFLAGS) $(LDLIBS) obj/client.o -o client
+$(NAME): obj/chat.o obj/client.o obj/host.o obj/threads.o
+	$(CC) $(LDFLAGS) $(LDLIBS) obj/chat.o obj/client.o obj/host.o obj/threads.o -o $(NAME)
 
-server: obj/server.o
-	$(CC) $(LDFLAGS) $(LDLIBS) obj/server.o -o server
+obj/chat.o: src/chat.c src/chat.h
+	$(CC) $(CFLAGS) src/chat.c -o obj/chat.o
 
-obj/client.o: src/client.c
+obj/client.o: src/client.c src/chat.h src/threads.h
 	$(CC) $(CFLAGS) src/client.c -o obj/client.o
 
-obj/server.o: src/server.c
-	$(CC) $(CFLAGS) src/server.c -o obj/server.o
+obj/host.o: src/host.c src/chat.h src/threads.h
+	$(CC) $(CFLAGS) src/host.c -o obj/host.o
+
+obj/threads.o: src/threads.c src/threads.h
+	$(CC) $(CFLAGS) src/threads.c -o obj/threads.o
 
 .PHONY:
 clean:
-	$(RM) obj/*.o client server
+	$(RM) obj/*.o $(NAME)
