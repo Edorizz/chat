@@ -6,7 +6,7 @@ create_host(struct host_t *host)
 {
 	socklen_t addr_size;
 	char client_paddr[16];
-	int r;
+	int r, reuse;
 
 	memset(&host->hints, 0, sizeof host->hints);
 	host->hints.ai_family = AF_INET;
@@ -22,6 +22,9 @@ create_host(struct host_t *host)
 		perror("socket");
 		return 2;
 	}
+
+	reuse = 1;
+	setsockopt(host->sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
 	if (bind(host->sockfd, host->res->ai_addr, host->res->ai_addrlen) == -1) {
 		perror("bind");

@@ -17,15 +17,6 @@ t_recv(void *in)
 	int r;
 
 	while (!data->in_flags) {
-		if ((r = recv(data->sockfd, (void*) data->buf, BUF_SIZ - 1, 0))) {
-			if (r == -1) {
-				perror("recv");
-				exit(7);
-			}
-			
-			data->buf[r] = '\0';
-			printf("stranger: %s\n", data->buf);
-		}
 	}
 
 	pthread_exit(0);

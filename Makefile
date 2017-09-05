@@ -3,7 +3,7 @@
 
 CC := gcc
 CFLAGS := -Wall -pedantic -c
-LDLIBS := -pthread
+LDLIBS := -pthread -lncurses
 NAME := chat
 MKDIR := mkdir -p
 RM := rm -f
