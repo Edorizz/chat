@@ -2,14 +2,10 @@
 #define HOST_H
 
 #include "chat.h"
-#include "threads.h"
 
 struct host_t {
-	/* [Socket] */
 	int sockfd, r;
 	struct addrinfo *res, hints;
-	/* [Thread] */
-	struct thread_t thread;
 
 	/* [Extra stuff needed by the host] */
 	int host;

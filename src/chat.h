@@ -2,6 +2,7 @@
 #define CHAT_H
 
 #define PORT	"1234"
+#define BUF_SIZ	256
 
 /* Client types */
 #define HOST	0
@@ -21,8 +22,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-/* Custom */
-#include "threads.h"
+/* Chat */
 #include "client.h"
 #include "host.h"
 

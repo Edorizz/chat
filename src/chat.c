@@ -1,6 +1,3 @@
-/* C Library */
-#include <stdio.h>
-
 /* Ncurses */
 #include <ncurses.h>
 
@@ -10,7 +7,7 @@
 void
 usage(const char *name)
 {
-	printf("%s: if this is still here it's because I forgot to remove it\n", name);
+	fprintf(stderr, "%s: [-c host]\n", name);
 }
 
 int
@@ -18,9 +15,10 @@ main(int argc, char **argv)
 {
 	struct host_t chat;
 	struct pollfd poll_sock;
-	char buf[BUF_SIZ], input_buf[BUF_SIZ], *hostname;
-	int i, client_type, c, quit, input_i, r, scroll, height;
+	char buf[BUF_SIZ], input_buf[BUF_SIZ], host_ip[64], *hostname;
+	int i, client_type, c, quit, input_i, r, scroll, height, width;
 
+	/* Parse command line arguments */
 	client_type = HOST;
 	for (i = 1; i != argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -28,12 +26,14 @@ main(int argc, char **argv)
 			case 'c':
 				client_type = CLIENT;
 				hostname = argv[i + 1];
+
 				break;
 
 			default:
 				fprintf(stderr, "unknown agrument '%c'\n", argv[i][1]);
-				return 1;
+				usage(argv[0]);
 
+				return 1;
 			}
 		}
 	}
@@ -41,13 +41,24 @@ main(int argc, char **argv)
 	/* Establish connection */
 	if (client_type == CLIENT) {
 		create_client((struct client_t *) &chat, hostname);
-		fprintf(stderr, "succesfully connected to %s\n", hostname);
+		fprintf(stderr, "Succesfully connected to %s\n", hostname);
 	} else if (client_type == HOST) {
 		create_host(&chat);
 	} else {
 		fprintf(stderr, "invalid client type\n");
 		return 8;
 	}
+
+	/* DEBUG
+	struct addrinfo *a;
+
+	for (a = chat.res; a; a = a->ai_next) {
+		memset(host_ip, 0, sizeof host_ip);
+		inet_ntop(a->ai_family, &a->ai_addr, host_ip, sizeof host_ip - 1);
+
+		printf("%s\n", host_ip);
+	}
+	*/
 
 	/* Initialize ncurses */
 	initscr();
@@ -57,7 +68,7 @@ main(int argc, char **argv)
 	timeout(0);
 
 	/* Get terminal dimensions */
-	height = getmaxy(stdscr);
+	getmaxyx(stdscr, height, width);
 
 	/* Initialize colors */
 	use_default_colors();
@@ -65,16 +76,24 @@ main(int argc, char **argv)
 	init_pair(1, COLOR_RED, -1);
 	init_pair(2, COLOR_BLUE, -1);
 
+	/* Setup socket polling */
 	poll_sock.fd = chat.sockfd;
 	poll_sock.events = POLLIN;
 
-	quit = input_i = scroll = 0;
+	/* Show connected ip on the top right */
+	memset(host_ip, 0, sizeof host_ip);
+	inet_ntop(chat.res->ai_family, &chat.res->ai_addr, host_ip, sizeof host_ip - 1);
+	mvprintw(0, width - strlen(host_ip) - 2, "%s", host_ip);
 	move(height - 1, 0);
+
+	quit = input_i = 0;
+	scroll = 1;
 
 	while (!quit) {
 		switch ((c = getch())) {
 		case KEY_F(1):
 			quit = 1;
+
 			break;
 
 		case '\n':
@@ -132,6 +151,7 @@ main(int argc, char **argv)
 			mvprintw(scroll, 0, "stranger:");
 			attroff(COLOR_PAIR(1));
 			printw(" %s", buf);
+			move(height - 1, input_i);
 			++scroll;
 
 			refresh();
