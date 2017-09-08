@@ -3,13 +3,13 @@
 
 #include "chat.h"
 
-struct client_t {
+struct client {
 	int sockfd, r;
 	struct addrinfo *res, hints;
 };
 
-int  create_client(struct client_t *chat, const char *hostname);
-void free_client(struct client_t *client);
+int  create_client(struct client *chat, const char *hostname);
+void free_client(struct client *client);
 
 #endif /* CLIENT_H */
 

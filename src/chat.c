@@ -4,8 +4,10 @@
 /* Chat */
 #include "chat.h"
 
+/*
 #define SCROLL_UP	0
 #define SCROLL_DOWN	1
+*/
 
 #define TEXT_COLOR_RED	1
 #define TEXT_COLOR_BLUE	2
@@ -28,7 +30,9 @@ struct msg {
 /* Keeps track of all messages in the current conversation */
 struct msg_log {
 	int ml_cnt, ml_ind, ml_buf_siz;
+	/*
 	int ml_scrl_off, ml_scrl_ind;
+	*/
 	char *ml_buf;
 	struct msg *ml_log;
 };
@@ -39,9 +43,19 @@ usage(const char *name)
 	fprintf(stderr, "%s: [-c host]\n", name);
 }
 
-void
-print_msg(const char *msg, int offset, int pf)
+/*
+int
+line_cnt(const struct msg *m, int width)
 {
+	/* Add width + 1 before dividing to round up
+	return (m->m_len + strlen(prefix[m->m_send].mp_prefix) + width + 3) / width;
+}
+*/
+
+void
+print_msg(WINDOW *win, const char *msg /*, int offset*/, int pf)
+{
+	/*
 	if (offset) {
 		printw("%s\n", msg + offset);
 	} else {
@@ -50,11 +64,17 @@ print_msg(const char *msg, int offset, int pf)
 		attroff(COLOR_PAIR(prefix[pf].mp_color));
 		printw("%s\n", msg);
 	}
-
+	*/
+	
+	wattron(win, COLOR_PAIR(prefix[pf].mp_color));
+	wprintw(win, "%s: ", prefix[pf].mp_prefix);
+	wattroff(win, COLOR_PAIR(prefix[pf].mp_color));
+	wprintw(win, "%s\n", msg);
 }
 
+/*
 void
-log_draw(const struct msg_log *log)
+log_draw(const struct msg_log *log, int max_lines)
 {
 	int i;
 
@@ -62,19 +82,21 @@ log_draw(const struct msg_log *log)
 	move(1, 0);
 
 	if (log->ml_scrl_ind < log->ml_ind) {
-		/* Draw the message at the top of the screen with an offset if necessary */
+		/* Draw the message at the top of the screen with an offset if necessary
 		print_msg(log->ml_buf + log->ml_log[log->ml_scrl_ind].m_off,
 			  log->ml_scrl_off,
 			  log->ml_log[log->ml_scrl_ind].m_send);
 		
-		/* Draw all other messages normally */
-		for (i = log->ml_scrl_ind + 1; i < log->ml_ind; ++i) {
+		/* Draw all other messages normally
+		for (i = log->ml_scrl_ind + 1; i < log->ml_ind && max_lines > 0; ++i) {
 			print_msg(log->ml_buf + log->ml_log[i].m_off, 0, log->ml_log[i].m_send);
+			max_lines -= line_cnt(
 		}
 	}
 
 	refresh();
 }
+*/
 
 void
 log_append(struct msg_log *log, const char *msg, int from)
@@ -118,57 +140,74 @@ log_append(struct msg_log *log, const char *msg, int from)
 	memcpy(log->ml_buf + off, msg, len + 1);
 }
 
-void
-log_scroll(struct msg_log *log, int dir, int scr_width)
+/*
+int
+log_scroll(struct msg_log *log, int dir, int scr_width, int count)
 {
 	struct msg *m;
-	int full_lines;
+	int full_lines, prev_off;
 
-	if (dir == SCROLL_UP) {
-		if (log->ml_scrl_off > 0) {
-			log->ml_scrl_off -= scr_width;
+	while (count--) {
+		if (dir == SCROLL_UP) {
+			if (log->ml_scrl_off > 0) {
+				log->ml_scrl_off -= scr_width;
+				
+				if (log->ml_scrl_off < 0) {
+					log->ml_scrl_off = 0;
+				}
+				
+			} else if (log->ml_scrl_off == 0 && log->ml_scrl_ind > 0) {
+				m = &log->ml_log[--log->ml_scrl_ind];
+				
+				full_lines = (m->m_len + strlen(prefix[m->m_send].mp_prefix) + 2) / scr_width;
+				
+				if (full_lines > 0) {
+					log->ml_scrl_off = scr_width - (strlen(prefix[m->m_send].mp_prefix) + 2) +
+						(full_lines - 1) * scr_width;
+				} else {
+					log->ml_scrl_off = 0;
+				}
 
-			if (log->ml_scrl_off < 0) {
-				log->ml_scrl_off = 0;
-			}
-
-		} else if (log->ml_scrl_off == 0 && log->ml_scrl_ind > 0) {
-			m = &log->ml_log[--log->ml_scrl_ind];
-
-			full_lines = (m->m_len + strlen(prefix[m->m_send].mp_prefix) + 2) / scr_width;
-
-			if (full_lines > 0) {
-				log->ml_scrl_off = scr_width - (strlen(prefix[m->m_send].mp_prefix) + 2) +
-					(full_lines - 1) * scr_width;
 			} else {
-				log->ml_scrl_off = 0;
+				return 0;
 			}
-		}
+			
+		} else if (dir == SCROLL_DOWN) {
+			m = &log->ml_log[log->ml_scrl_ind];
+			prev_off = log->ml_scrl_off;
+			
+			if (log->ml_scrl_off > 0) {
+				log->ml_scrl_off += scr_width;
+			} else if (log->ml_scrl_off == 0 && log->ml_scrl_ind < log->ml_ind - 1) {
+				log->ml_scrl_off = scr_width - (strlen(prefix[m->m_send].mp_prefix) + 2);
+			}
+			
+			if (log->ml_scrl_off >= m->m_len) {
+				if (log->ml_scrl_ind < log->ml_cnt - 1) {
+					log->ml_scrl_off = 0;
+					++log->ml_scrl_ind;
 
-	} else if (dir == SCROLL_DOWN) {
-		m = &log->ml_log[log->ml_scrl_ind];
-
-		if (log->ml_scrl_off > 0) {
-			log->ml_scrl_off += scr_width;
-		} else if (log->ml_scrl_off == 0 && log->ml_scrl_ind < log->ml_ind - 1) {
-			log->ml_scrl_off = scr_width - (strlen(prefix[m->m_send].mp_prefix) + 2);
-		}
-
-		if (log->ml_scrl_off >= m->m_len) {
-			log->ml_scrl_off = 0;
-			++log->ml_scrl_ind;
+				} else {
+					log->ml_scrl_off = prev_off;
+					return 0;
+				}
+			}
 		}
 	}
+
+	return 1;
 }
+*/
 
 int
 main(int argc, char **argv)
 {
-	struct host_t chat;
+	struct host chat;
 	struct pollfd poll_sock;
 	struct msg_log log;
 	char buf[BUF_SIZ], input_buf[BUF_SIZ], host_ip[64], *hostname;
-	int i, client_type, c, quit, input_i, r, height, width;
+	int i, client_type, c, quit, input_i, r; /* height, width, scroll; */
+	WINDOW *chat_win, *chat_win_b, *input_win, *input_win_b;
 
 	/* Parse command line arguments */
 	client_type = HOST;
@@ -192,13 +231,9 @@ main(int argc, char **argv)
 
 	/* Establish connection */
 	if (client_type == CLIENT) {
-		create_client((struct client_t *) &chat, hostname);
-		fprintf(stderr, "Succesfully connected to %s\n", hostname);
+		create_client((struct client *) &chat, hostname);
 	} else if (client_type == HOST) {
 		create_host(&chat);
-	} else {
-		fprintf(stderr, "invalid client type\n");
-		return 8;
 	}
 
 	/* DEBUG
@@ -218,9 +253,23 @@ main(int argc, char **argv)
 	cbreak();
 	noecho();
 	timeout(0);
+	curs_set(0);
 
-	/* Get terminal dimensions */
-	getmaxyx(stdscr, height, width);
+	/* Create windows */
+	chat_win_b = newwin(LINES - 5, COLS, 0, 0);
+	chat_win = newwin(LINES - 3, COLS - 2, 1, 1);
+	input_win_b = newwin(5, COLS, LINES - 5, 0);
+	input_win = newwin(3, COLS - 2, LINES - 4, 1);
+
+	refresh();
+
+	box(chat_win_b, 0, 0);
+	box(input_win_b, 0, 0);
+	wrefresh(chat_win_b);
+	wrefresh(input_win_b);
+
+	scrollok(chat_win, TRUE);
+	scrollok(input_win, TRUE);
 
 	/* Initialize colors */
 	use_default_colors();
@@ -230,13 +279,12 @@ main(int argc, char **argv)
 
 	/* Setup socket polling */
 	poll_sock.fd = chat.sockfd;
-	poll_sock.events = POLLIN;
+	poll_sock.events = POLLIN | POLLHUP;
 
 	/* Show connected ip on the top right */
 	memset(host_ip, 0, sizeof host_ip);
 	inet_ntop(chat.res->ai_family, &chat.res->ai_addr, host_ip, sizeof host_ip - 1);
-	mvprintw(0, width - strlen(host_ip) - 2, "%s", host_ip);
-	move(height - 1, 0);
+	mvwprintw(chat_win, 0, COLS - strlen(host_ip) - 2, "%s\n", host_ip);
 
 	/* Setup message log */
 	memset(&log, 0, sizeof log);
@@ -246,7 +294,7 @@ main(int argc, char **argv)
 	log.ml_buf = malloc(log.ml_buf_siz);
 	log.ml_log = malloc(log.ml_cnt * sizeof(struct msg));
 
-	quit = input_i = 0;
+	quit = input_i = /*scroll =*/ 0;
 
 	while (!quit) {
 		switch ((c = getch())) {
@@ -255,29 +303,55 @@ main(int argc, char **argv)
 
 			break;
 
+			/*
 		case KEY_F(2):
-			log_scroll(&log, SCROLL_DOWN, width);
+			if (log_scroll(&log, SCROLL_DOWN, width, 1)) {
+				++scroll;
+			}
 			log_draw(&log);
 
 			break;
 
 		case KEY_F(3):
-			log_scroll(&log, SCROLL_UP, width);
+			if (log_scroll(&log, SCROLL_UP, width, 1)) {
+				++scroll;
+			}
 			log_draw(&log);
 
 			break;
+			*/
 			
 		case '\n':
-			input_buf[input_i] = '\0';
-			if (send(chat.sockfd, input_buf, input_i, 0) == -1) {
-				perror("send");
-				return 6;
+			if (input_i > 0) {
+				input_buf[input_i] = '\0';
+				
+				if (send(chat.sockfd, input_buf, input_i, 0) == -1) {
+					perror("send");
+					return 6;
+				}
+				
+				input_i = 0;
+				log_append(&log, input_buf, 1);
+
+				/*
+				scroll += line_cnt(&log.ml_log[log.ml_ind - 1], width);
+				if (scroll >= height - 2) {
+					log_scroll(&log, SCROLL_DOWN, width, scroll - (height - 2) + 1);
+					scroll = height - 3;
+				}
+				
+				log_draw(&log);
+				*/
+
+				/* Draw chat window */
+				print_msg(chat_win, input_buf, 1);
+				wrefresh(chat_win);
+
+				/* Draw input window */
+				wclear(input_win);
+				wrefresh(input_win);
+				wmove(input_win, 0, 0);
 			}
-
-			input_i = 0;
-
-			log_append(&log, input_buf, 1);
-			log_draw(&log);
 
 			break;
 
@@ -285,9 +359,9 @@ main(int argc, char **argv)
 			if (input_i > 0) {
 				input_buf[--input_i] = '\0';
 
-				move(height - 1, 0);
-				clrtoeol();
-				mvprintw(height - 1, 0, "%s", input_buf);
+				wclear(input_win);
+				mvwprintw(input_win, 0, 0, "%s", input_buf);
+				wrefresh(input_win);
 			}
 
 			break;
@@ -297,30 +371,54 @@ main(int argc, char **argv)
 				input_buf[input_i++] = c;
 				input_buf[input_i] = '\0';
 
+				/*
 				move(height - 1, 0);
 				clrtoeol();
 				mvprintw(height - 1, 0, "%s", input_buf);
+				*/
+
+				mvwprintw(input_win, 0, 0, "%s", input_buf);
+				wrefresh(input_win);
 			}
 
 			break;
 		}
 
-		if (poll(&poll_sock, 1, 10) && (r = recv(chat.sockfd, (void*) buf, BUF_SIZ - 1, 0))) {
-			if (r == -1) {
-				perror("recv");
-				exit(7);
-			}
-			
-			buf[r] = '\0';
+		/* Check socket events */
+		if (poll(&poll_sock, 1, 10)) {
+			if (poll_sock.revents & POLLIN) {
+				r = recv(chat.sockfd, (void*) buf, BUF_SIZ - 1, 0);
+				if (r == -1) {
+					perror("recv");
+					exit(7);
 
-			log_append(&log, buf, 0);
-			log_draw(&log);
+				} else if (r == 0) {
+					quit = 1;
+				}
+				
+				buf[r] = '\0';
+				
+				log_append(&log, buf, 0);
+
+				/*
+				scroll += line_cnt(&log.ml_log[log.ml_ind - 1], width);
+				if (scroll >= height - 2) {
+					log_scroll(&log, SCROLL_DOWN, width, scroll - (height - 2) + 1);
+					scroll = height - 3;
+				}
+
+				log_draw(&log);
+				*/
+
+				print_msg(chat_win, buf, 0);
+				wrefresh(chat_win);
+			}
 		}
 	}
 
 	/* Close connection and free memory */
 	if (client_type == CLIENT) {
-		free_client((struct client_t *) &chat);
+		free_client((struct client *) &chat);
 	} else if (client_type == HOST) {
 		free_host(&chat);
 	}

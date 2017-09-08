@@ -2,7 +2,7 @@
 #include "host.h"
 
 int
-create_host(struct host_t *host)
+create_host(struct host *host)
 {
 	socklen_t addr_size;
 	char client_paddr[16];
@@ -47,13 +47,11 @@ create_host(struct host_t *host)
 		return 6;
 	}
 
-	printf("Client %s connected\n", client_paddr);
-
 	return 0;
 }
 
 void
-free_host(struct host_t *host)
+free_host(struct host *host)
 {
 	close(host->host);
 	close(host->sockfd);

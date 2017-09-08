@@ -3,7 +3,7 @@
 
 #include "chat.h"
 
-struct host_t {
+struct host {
 	int sockfd, r;
 	struct addrinfo *res, hints;
 
@@ -12,8 +12,8 @@ struct host_t {
 	struct sockaddr_in client_addr;
 };
 
-int  create_host(struct host_t *host);
-void free_host(struct host_t *host);
+int  create_host(struct host *host);
+void free_host(struct host *host);
 
 #endif /* HOST_H */
 

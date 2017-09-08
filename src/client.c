@@ -2,7 +2,7 @@
 #include "client.h"
 
 int
-create_client(struct client_t *client, const char *hostname)
+create_client(struct client *client, const char *hostname)
 {
 	memset(&client->hints, 0, sizeof client->hints);
 	client->hints.ai_family = AF_INET;
@@ -27,7 +27,7 @@ create_client(struct client_t *client, const char *hostname)
 }
 
 void
-free_client(struct client_t *client)
+free_client(struct client *client)
 {
 	freeaddrinfo(client->res);
 }
